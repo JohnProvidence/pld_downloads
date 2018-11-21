@@ -1,0 +1,7 @@
+name = Prov Lib Digital Downloads
+dependencies[] = islandora
+description = displays a link to available datastreams, finding aids and other object content as downloads
+package = Islandora Tools
+version = 7.x-1.0
+core = 7.x
+stylesheets[all][] = css/pld_downloads.css

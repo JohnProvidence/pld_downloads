@@ -1,0 +1,123 @@
+<?php
+
+function pld_downloads_block_info() {
+	$blocks['pld_downloads'] = array(
+		'info' => t('Prov Lib Digital Object Downloads')
+	);
+
+	return $blocks;
+}
+
+function pld_downloads_block_view($delta = '') {
+	switch($delta) {
+		case 'pld_downloads':
+		if(user_access('access content')) {
+			$block['subject'] = NULL;
+			$block['content'] = pld_downloads_available_downloads();
+			return $block;
+		}
+	}
+}
+
+function pld_downloads_available_downloads() {
+	module_load_include('inc', 'islandora', 'includes/datastream');
+  	module_load_include('inc', 'islandora', 'includes/utilities');
+
+ 	$items = array();
+
+ 	$pid = arg(2);
+ 	$base_url = '/islandora/object/';
+
+ 	if($pid != 'islandora:root') {
+
+ 		$object = islandora_object_load($pid);
+ 		$obj_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
+ 		
+ 		$content_model = $obj_models[0]['object']['value'];
+ 		
+ 		switch($content_model) {
+ 			case 'islandora:collectionCModel':
+ 				return;
+ 				break;
+ 			case 'islandora:sp_basic_image':
+ 				$parents = $object->getParents();
+ 				if(!empty($parents)):
+ 					// get parent if parents array is not empty
+ 					$parent_object = islandora_object_load($parents[0]);
+ 					$parent_label = $parent_object->label;
+ 					// get datastreams
+ 				endif;
+ 				if(empty($parents)):
+ 					$relationships = $object->relationships->get('info:fedora/fedora-system:def/relations-external#', 'isConstituentOf');
+ 					$parent = $relationships[0]['object']['value'];
+ 					$parent_object = islandora_object_load($parent);
+ 					$collection = $parent_object->getParents();
+ 					$collection_object = islandora_object_load($collection[0]);
+ 					$collection_label = $collection_object->label;
+ 					$collection_pid = $collection_object->id;
+
+ 					$finding_aid = $collection_object['FINDING_AID'];
+
+ 					if($finding_aid != NULL) {
+ 						$finding_aid_url = $base_url . $collection_pid . '/datastream/FINDING_AID/view';
+ 						$items['collection_finding_aid'] = $finding_aid_url;
+ 					} else {
+ 						$items['collection_finding_aid'] = NULL;
+ 					}
+ 					
+ 					$items['in_collection'] = $collection_label;
+ 					$items['collection_pid'] = $collection_pid;
+ 					$items['MODS_URL'] = $base_url . $pid .'/datastream/MODS/view';
+ 					$items['DC_URL'] = $base_url . $pid .'/datastream/DC/view';
+ 					$items['marc_xml'] = $base_url . $pid .'/download_mods_as_marcxml';
+ 					$items['OBJ_URL'] = $base_url . $pid . '/datastream/OBJ/view';
+
+
+ 				endif;
+ 				break;
+ 			case 'islandora:compoundCModel':
+ 					$parents = $object->getParents();
+ 					$parent_object = islandora_object_load($parents[0]);
+ 					$parent_label = $parent_object->label;
+ 					$parent_pid = $parent_object->id;
+
+ 					$items['in_collection'] = $parent_label;
+ 					$items['collection_pid'] = $parent_pid;
+
+ 					if($finding_aid != NULL) {
+ 						$finding_aid_url = $base_url . $parent_pid . '/datastream/FINDING_AID/view';
+ 						$items['collection_finding_aid'] = $finding_aid_url;
+ 					} else {
+ 						$items['collection_finding_aid'] = NULL;
+ 					}
+
+ 					$parts = islandora_compound_object_get_parts($pid);
+ 					$first_child = $parts[0];
+ 					$items['MODS_URL'] = $base . $pid . '/datastream/MODS/view';
+ 					$items['DC_URL'] = $base . $pid . '/datastream/DC/view';
+ 					$items['marc_xml'] = $base . $pid . '/download_mods_as_marcxml';
+ 					$items['OBJ_URL'] = $base . $first_child . '/datastream/OBJ/view';
+
+ 				break;
+ 		}
+ 		
+ 	}
+ 	if(!empty($items)):
+ 	return theme('pld_downloadsds_available_downloads', array('items' => $items));
+ 	endif;
+
+}
+
+function pld_downloads_theme() {
+	$base = array(
+		'path' => drupal_get_path('module', 'pld_downloads') . '/theme',
+	);
+	return array(
+		'pld_downloads_available_downloads' => $base + array(
+			'template' => 'pld-downloads',
+			'variables' => array( 'items' => NULL,),
+		),
+	);
+}
+
+?>
